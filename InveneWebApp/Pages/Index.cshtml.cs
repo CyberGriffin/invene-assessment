@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using InveneWebApp.Models;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 
 namespace InveneWebApp.Pages;
 
@@ -21,13 +22,18 @@ public class IndexModel : PageModel
 
     }
 
-    public async Task OnPostAsync()
+    /// <summary>
+    /// Handles POST requests for file uploads.
+    /// Processes each file and redacts PHI.
+    /// </summary>
+    /// <returns>A File download prompt or redirect</returns>
+    public async Task<IActionResult> OnPostAsync()
     {
-        // TODO handle file upload
-
         var allowed = _config.GetSection("PHI:Allowed").Get<List<string>>() ?? new List<string>();
         var denyValue = _config.GetSection("PHI:DenyValue").Get<string>() ?? string.Empty;
         PHIConfig phiConfig = new(allowed, denyValue);
+
+        var filesToZip = new List<(string FileName, byte[] Content)>();
 
         foreach (var file in Request.Form.Files)
         {
@@ -42,12 +48,38 @@ public class IndexModel : PageModel
                 stringBuilder.AppendLine(processedLine);
             }
 
-            var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            var outputPath = Path.Combine(wwwrootPath, $"{file.FileName.Split(".").FirstOrDefault()}_sanitized.txt");
-            await System.IO.File.WriteAllTextAsync(outputPath, stringBuilder.ToString());
+            var content = Encoding.UTF8.GetBytes(stringBuilder.ToString());
+            var filename = $"{Path.GetFileNameWithoutExtension(file.FileName)}_sanitized.txt";
+            filesToZip.Add((filename, content));
         }
+
+        if (filesToZip.Count == 1)
+        {
+            return File(filesToZip[0].Content, "text/plain", filesToZip[0].FileName);
+        }
+        else if (filesToZip.Count > 1)
+        {
+            using var zipStream = new MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, true))            foreach (var (filename, content) in filesToZip)
+            {
+                var entry = archive.CreateEntry(filename);
+                using var entryStream = entry.Open();
+                await entryStream.WriteAsync(content, 0, content.Length);
+            }
+            zipStream.Position = 0;
+            return File(zipStream.ToArray(), "application/zip", "sanitized_files.zip");
+        }
+
+        return RedirectToPage();
     }
 
+    /// <summary>
+    /// Processes a line of input, redacting PHI based on configuration.
+    /// </summary>
+    /// <param name="line"></param>
+    /// <param name="phiConfig"></param>
+    /// <param name="parentWasRedacted"></param>
+    /// <returns>A processed line with redacted PHI.</returns>
     private static string ProcessLine(string line, PHIConfig phiConfig, ref bool parentWasRedacted)
     {
         // Removing the list markers for easier matching
