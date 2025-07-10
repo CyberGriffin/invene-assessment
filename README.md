@@ -35,3 +35,4 @@ I did this to ensure PHI elements were redacted by default, and that only explic
 * **User Interface**: The user interface is very basic, and provides no details to the user.
 * **Processing**: Move the logic for processing and redacting the files to it's own service.
 * **Testing**: Implement unit tests to increase maintainability.
+* **Regex**: The robustness of this solution could be improved by using regex to find patterns in the PHI, allowing for more flexibility in the input files.
