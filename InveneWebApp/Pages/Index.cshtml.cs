@@ -53,6 +53,7 @@ public class IndexModel : PageModel
             filesToZip.Add((filename, content));
         }
 
+        // Prompt user to download files
         if (filesToZip.Count == 1)
         {
             return File(filesToZip[0].Content, "text/plain", filesToZip[0].FileName);
@@ -60,12 +61,13 @@ public class IndexModel : PageModel
         else if (filesToZip.Count > 1)
         {
             using var zipStream = new MemoryStream();
-            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, true))            foreach (var (filename, content) in filesToZip)
-            {
-                var entry = archive.CreateEntry(filename);
-                using var entryStream = entry.Open();
-                await entryStream.WriteAsync(content, 0, content.Length);
-            }
+            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, true))
+                foreach (var (filename, content) in filesToZip)
+                {
+                    var entry = archive.CreateEntry(filename);
+                    using var entryStream = entry.Open();
+                    await entryStream.WriteAsync(content);
+                }
             zipStream.Position = 0;
             return File(zipStream.ToArray(), "application/zip", "sanitized_files.zip");
         }
