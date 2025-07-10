@@ -1,0 +1,10 @@
+Patient Name: John Doe
+Date of Birth: 01/23/1980
+Social Security Number: 123-45-6789
+Address: 123 Main St, Anytown, USA
+Phone Number: (555) 123-4567
+Email: john.doe@example.com
+Medical Record Number: MRN-0012345
+Order Details:
+- Complete Blood Count (CBC)
+- Comprehensive Metabolic Panel (CMP)
